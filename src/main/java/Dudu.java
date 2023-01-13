@@ -1,10 +1,12 @@
+import com.github.kwhat.jnativehook.GlobalScreen;
+import com.github.kwhat.jnativehook.NativeHookException;
+import com.github.kwhat.jnativehook.keyboard.NativeKeyEvent;
+import com.github.kwhat.jnativehook.keyboard.NativeKeyListener;
 import org.sikuli.script.ImagePath;
 import org.sikuli.script.Screen;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.util.HashMap;
 import java.util.List;
@@ -25,7 +27,8 @@ public class Dudu extends JFrame {
 	static String convoke = prefix + "convoke.png";
 	static String celestial = prefix + "celestial.png";
 	static String wrath = prefix + "wrath.png";
-	static String starweaver = prefix + "starweaver.png";
+	static String warp = prefix + "warp.png";
+	static String weft = prefix + "weft.png";
 	static String fungal = prefix + "fungal.png";
 
 	public static final int WRATH = KeyEvent.VK_NUMPAD3;
@@ -41,11 +44,12 @@ public class Dudu extends JFrame {
 	public static final int CONVOKE = KeyEvent.VK_0;
 
 	public static final List<Object> prioritySingle = List.of(
+			starSurge,
+			weft,
+			warp,
 			moonfire,
 			sunfire,
 			lunarEclipse,
-			starSurge,
-			starweaver,
 			fungal,
 			stellarFlare,
 			celestial,
@@ -55,11 +59,12 @@ public class Dudu extends JFrame {
 			wrath);
 
 	public static final List<Object> priorityMulti = List.of(
+			starfall,
+			weft,
+			warp,
 			moonfire,
 			sunfire,
 			lunarEclipse,
-			starfall,
-			starweaver,
 			fungal,
 			stellarFlare,
 			celestial,
@@ -75,11 +80,12 @@ public class Dudu extends JFrame {
 			put(lunarEclipse, WRATH);
 			put(fungal, FUNGAL);
 //			put(lunarEclipse, STARFIRE);
-			put(starweaver, STARFALL);
+			put(warp, STARFALL);
+			put(weft, STARSURGE);
 			put(wrath, WRATH);
 			put(starSurge, STARSURGE);
 			put(starfall, STARFALL);
-			put(starfire, STARFIRE);
+			put(starfire, WRATH);
 			put(moon, MOON);
 			put(celestial, CELESTIAL);
 			put(convoke, CONVOKE);
@@ -96,19 +102,22 @@ public class Dudu extends JFrame {
 	private boolean singleMode = true;
 
 
-	public Dudu() throws AWTException {
+	public Dudu() throws AWTException, NativeHookException {
 
 		ImagePath.add(prefix);
 
-		screen.setW(400);
-		screen.setH(2000);
-		screen.setAutoWaitTimeout(0.05);
-		var startStopButtonSingle = new JButton("Start Single");
-		startStopButtonSingle.addActionListener(new ActionListener() {
+		GlobalScreen.registerNativeHook();
+
+		GlobalScreen.addNativeKeyListener(new NativeKeyListener() {
 			@Override
-			public void actionPerformed(ActionEvent e) {
-				if (!running) {
-					startStopButtonSingle.setText("Stop Single");
+			public void nativeKeyTyped(NativeKeyEvent nativeEvent) {
+
+			}
+
+			@Override
+			public void nativeKeyPressed(NativeKeyEvent nativeEvent) {
+				if (nativeEvent.getKeyCode() == NativeKeyEvent.VC_DELETE && !running) {
+					System.out.println("running");
 					running = true;
 					taskThread = new Thread(() -> {
 						while (running) {
@@ -128,44 +137,36 @@ public class Dudu extends JFrame {
 						}
 					});
 					taskThread.start();
-				} else {
-					startStopButtonSingle.setText("Start Single");
+				}
+			}
+
+			@Override
+			public void nativeKeyReleased(NativeKeyEvent nativeEvent) {
+				if (nativeEvent.getKeyCode() == NativeKeyEvent.VC_DELETE && running) {
 					running = false;
 					taskThread.interrupt();
 					taskThread = null;
 				}
 			}
 		});
-		var startStopButtonMulti = new JButton("Start Multi");
-		startStopButtonMulti.addActionListener(e -> {
-			if (!running) {
-				startStopButtonMulti.setText("Stop multi");
-				running = true;
-				taskThread = new Thread(() -> {
-					while (running) {
-						try {
-							var single = screen.findAnyList(priorityMulti).get(0);
 
-							var runKey = runMap.get(single.getImageFilename());
-							System.out.println(single.getImageFilename());
-							robot.keyPress(runKey);
-							Thread.sleep(50);
-							robot.keyRelease(runKey);
+		screen.setX(50);
+		screen.setY(500);
+		screen.setW(200);
+		screen.setH(700);
 
-						} catch (Exception es5) {
-
-						}
-
-					}
-				});
-				taskThread.start();
+		var startStopButtonSingle = new JButton("Start Single");
+		startStopButtonSingle.addActionListener(e -> {
+			singleMode = !singleMode;
+			if (singleMode) {
+				startStopButtonSingle.setText("Stop Single");
 			} else {
-				startStopButtonMulti.setText("Start Multi");
-				running = false;
-				taskThread.interrupt();
-				taskThread = null;
+				startStopButtonSingle.setText("Start Single");
+
 			}
 		});
+		var startStopButtonMulti = new JButton("Start Multi");
+
 		setLayout(new FlowLayout());
 		add(startStopButtonSingle);
 		add(startStopButtonMulti);
@@ -176,7 +177,7 @@ public class Dudu extends JFrame {
 		setVisible(true);
 	}
 
-	public static void main(String[] args) throws AWTException {
+	public static void main(String[] args) throws AWTException, NativeHookException {
 		new Dudu();
 	}
 
